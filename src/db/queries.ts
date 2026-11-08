@@ -49,6 +49,23 @@ export function listOrgSkills(org_id: string): { id: string; name: string }[] {
     .all(org_id) as { id: string; name: string }[];
 }
 
+export interface MissionRequirementRow {
+  skill_id: string;
+  skill_name: string;
+  min_level: number;
+  min_count: number;
+}
+
+export function listMissionRequirements(missionId: string): MissionRequirementRow[] {
+  return getDb()
+    .prepare(
+      `SELECT r.skill_id, s.name AS skill_name, r.min_level, r.min_count
+       FROM mission_requirements r JOIN skills s ON s.id = r.skill_id
+       WHERE r.mission_id = ? ORDER BY s.name`,
+    )
+    .all(missionId) as MissionRequirementRow[];
+}
+
 export interface MissionListRow {
   id: string;
   title: string;

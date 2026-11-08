@@ -54,6 +54,24 @@ missions
 missions
   .command('show <id>')
   .action((id) => run(async () => print(opts(), await api(opts(), 'GET', `/missions/${id}`))));
+missions
+  .command('edit <id>')
+  .option('--title <t>')
+  .option('--start <YYYY-MM-DD>')
+  .option('--end <YYYY-MM-DD>')
+  .action((id, c) =>
+    run(async () => {
+      const body: any = {};
+      if (c.title) body.title = c.title;
+      if (c.start) body.start_date = c.start;
+      if (c.end) body.end_date = c.end;
+      if (Object.keys(body).length === 0) {
+        console.error('pass at least one of --title | --start | --end');
+        process.exit(1);
+      }
+      return print(opts(), await api(opts(), 'PATCH', `/missions/${id}`, body));
+    }),
+  );
 for (const a of ['submit', 'approve', 'reject', 'activate', 'complete', 'cancel'] as const) {
   missions
     .command(`${a} <id>`)
@@ -94,6 +112,17 @@ program
 
 // ---- assignments ----
 const asg = program.command('assignments').description('staff missions');
+asg
+  .command('list')
+  .option('--mission <id>')
+  .option('--mine', 'only mine')
+  .action((c) => {
+    const q = new URLSearchParams();
+    if (c.mission) q.set('mission_id', c.mission);
+    if (c.mine) q.set('mine', '1');
+    const suffix = q.size ? `?${q}` : '';
+    return run(async () => print(opts(), await api(opts(), 'GET', `/assignments${suffix}`)));
+  });
 asg
   .command('propose <mission-id> <user-id>')
   .action((mid, uid) =>

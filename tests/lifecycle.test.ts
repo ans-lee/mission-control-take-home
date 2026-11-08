@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterAll } from 'vitest';
 import { buildServer } from '../src/server.js';
-import { closeDb } from '../src/db/client.js';
+import { closeDb, getDb } from '../src/db/client.js';
 import { reset, addOrg, addUser, addMission } from './helpers.js';
 
 process.env.MC_DB = ':memory:';
@@ -87,5 +87,47 @@ describe('lifecycle', () => {
       payload: { title: 'one-day', start_date: '2027-01-01', end_date: '2027-01-01' },
     });
     expect(res.statusCode).toBe(200);
+  });
+
+  it('edit title/dates in draft ok, locked after approval, crew 403', async () => {
+    const app = buildServer();
+    const ok = await app.inject({
+      method: 'PATCH', url: '/missions/m-draft', headers: as('orga-lead-1'),
+      payload: { title: 'renamed' },
+    });
+    expect(ok.json().mission.title).toBe('renamed');
+
+    const badRange = await app.inject({
+      method: 'PATCH', url: '/missions/m-draft', headers: as('orga-lead-1'),
+      payload: { start_date: '2027-02-01', end_date: '2027-01-01' },
+    });
+    expect(badRange.statusCode).toBe(400);
+
+    const crew = await app.inject({
+      method: 'PATCH', url: '/missions/m-draft', headers: as('orga-crew-1'),
+      payload: { title: 'x' },
+    });
+    expect(crew.statusCode).toBe(403);
+
+    await app.inject({ method: 'POST', url: '/missions/m-draft/submit', headers: as('orga-lead-1') });
+    await app.inject({ method: 'POST', url: '/missions/m-draft/approve', headers: as('orga-lead-2') });
+    const locked = await app.inject({
+      method: 'PATCH', url: '/missions/m-draft', headers: as('orga-lead-1'),
+      payload: { title: 'late' },
+    });
+    expect(locked.statusCode).toBe(409);
+  });
+
+  it('show embeds requirements', async () => {
+    const app = buildServer();
+    getDb().exec(
+      `INSERT INTO skills (id, org_id, name) VALUES ('s1','orga','piloting');
+       INSERT INTO mission_requirements (mission_id, skill_id, min_level, min_count)
+       VALUES ('m-draft','s1',3,1);`,
+    );
+    const res = await app.inject({ method: 'GET', url: '/missions/m-draft', headers: as('orga-lead-1') });
+    expect(res.json().requirements).toEqual([
+      { skill_id: 's1', skill_name: 'piloting', min_level: 3, min_count: 1 },
+    ]);
   });
 });

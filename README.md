@@ -12,7 +12,7 @@ Requires Node 22+.
 npm install
 npm run seed   # reset mission-control.db with representative data
 npm run api    # Fastify on :3000 (PORT=3100 npm run api for another port)
-npm test       # 21 tests (tenancy, SoD, lifecycle, matcher, assignments, roster)
+npm test       # 26 tests (tenancy, SoD, lifecycle, matcher, assignments, roster)
 ```
 
 ## Seed story
@@ -39,9 +39,13 @@ npm run cli -- --as orga-lead-1 skills list
 
 # plan → match → propose → approve (SoD demo)
 npm run cli -- --as orga-lead-1 missions create --title "Relay fix" --start 2027-02-01 --end 2027-02-05
+npm run cli -- --as orga-lead-1 missions edit <mission-id> --title "Relay fix v2"
 npm run cli -- --as orga-lead-1 requirements add <mission-id> --skill piloting --min-level 3 --count 1
+npm run cli -- --as orga-lead-1 requirements remove <mission-id> --skill piloting
 npm run cli -- --as orga-lead-1 match <mission-id>
 npm run cli -- --as orga-lead-1 assignments propose <mission-id> orga-crew-1
+npm run cli -- --as orga-lead-1 assignments list --mission <mission-id>
+npm run cli -- --as orga-crew-1 assignments list --mine
 npm run cli -- --as orga-lead-1 missions submit <mission-id>
 npm run cli -- --as orga-lead-1 missions approve <mission-id>  # fails: [SELF_APPROVAL]
 npm run cli -- --as orga-lead-2 missions approve <mission-id>  # succeeds (peer)
@@ -61,12 +65,12 @@ Human tables by default; errors print as `[CODE] message`
 
 | Method | Path | Role |
 |---|---|---|
-| GET | `/users`, `/missions`, `/missions/:id` | any (org-scoped, cross-org → 404) |
-| POST | `/missions` | lead+ |
+| GET | `/users`, `/missions`, `/missions/:id` (+`requirements[]`) | any (org-scoped, cross-org → 404) |
+| POST / PATCH | `/missions` / `/missions/:id` (title/dates) | lead+, edit in draft\|proposed only |
 | POST | `/missions/:id/submit\|approve\|reject\|activate\|complete\|cancel` | lead+, SoD on approve/reject |
 | GET | `/missions/:id/matches` | lead+, draft\|proposed only |
-| POST | `/missions/:id/requirements` | lead+ |
-| POST | `/assignments` | lead+, draft\|proposed only |
+| POST / DELETE | `/missions/:id/requirements` (`:skill`) | lead+, draft\|proposed only (upsert/delete) |
+| GET / POST | `/assignments[?mission_id][?mine]` / `/assignments` | crew own, lead+ org-wide; propose draft\|proposed only |
 | POST | `/assignments/:id/respond` | assignee or director |
 | GET | `/skills` | any (open catalog — see below) |
 | POST | `/skills` | director |
@@ -90,6 +94,6 @@ probe), 409 bad transition/duplicate.
 
 ## Layout
 
-`src/server.ts` `src/db/{schema.sql,client.ts,queries.ts,seed.ts}`
-`src/services/{auth,lifecycle,matcher,assignments,roster}.ts`
-`src/schemas.ts` `cli/{index.ts,client.ts}` `tests/*.test.ts`
+`src/server.ts` `src/db/{schema.sql,client.ts,queries.ts,ids.ts,seed.ts}`
+`src/services/{auth,mission,matcher,assignments,roster}.ts`
+`src/schemas.ts` `cli/{index.ts,client.ts}` `tests/*.test.ts` (+`helpers.ts`)

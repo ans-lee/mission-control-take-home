@@ -104,7 +104,6 @@ export function proposeAssignment(input: z.infer<typeof proposeSchema>, actor: A
 }
 
 export const respondSchema = z.object({ accept: z.boolean() });
-
 export function respondToAssignment(assignmentId: string, accept: boolean, actor: Actor) {
   const db = getDb();
   const asg = db.prepare('SELECT * FROM assignments WHERE id = ?').get(assignmentId) as any;
@@ -125,4 +124,41 @@ export function respondToAssignment(assignmentId: string, accept: boolean, actor
   const next = accept ? 'accepted' : 'declined';
   db.prepare('UPDATE assignments SET status = ? WHERE id = ?').run(next, assignmentId);
   return db.prepare('SELECT * FROM assignments WHERE id = ?').get(assignmentId);
+}
+
+/** Scoped assignment list. Crew sees own only; lead/director see org-wide, optional mission filter. */
+export function listAssignments(actor: Actor, filter?: { mission_id?: string; mine?: boolean }): unknown[] {
+  const db = getDb();
+  if (filter?.mission_id) {
+    const mission = db.prepare('SELECT * FROM missions WHERE id = ?').get(filter.mission_id) as any;
+    if (!mission) throw { statusCode: 404, code: 'NOT_FOUND', message: 'not found' };
+    assertSameOrg(actor.org_id, mission.org_id);
+    if (actor.role === 'crew') {
+      return db
+        .prepare('SELECT * FROM assignments WHERE mission_id = ? AND user_id = ? ORDER BY id')
+        .all(filter.mission_id, actor.id);
+    }
+    if (filter.mine) {
+      return db
+        .prepare('SELECT * FROM assignments WHERE mission_id = ? AND user_id = ? ORDER BY id')
+        .all(filter.mission_id, actor.id);
+    }
+    return db
+      .prepare('SELECT * FROM assignments WHERE mission_id = ? ORDER BY id')
+      .all(filter.mission_id);
+  }
+  if (actor.role === 'crew' || filter?.mine) {
+    return db
+      .prepare(
+        `SELECT a.* FROM assignments a JOIN missions m ON m.id = a.mission_id
+         WHERE a.user_id = ? AND m.org_id = ? ORDER BY a.id`,
+      )
+      .all(actor.id, actor.org_id);
+  }
+  return db
+    .prepare(
+      `SELECT a.* FROM assignments a JOIN missions m ON m.id = a.mission_id
+       WHERE m.org_id = ? ORDER BY a.id`,
+    )
+    .all(actor.org_id);
 }

@@ -132,4 +132,21 @@ describe('assignments', () => {
     });
     expect(locked.statusCode).toBe(409);
   });
+
+  it('list: crew sees own, lead sees org-wide + mission filter', async () => {
+    const app = buildServer();
+    addAssignment('asg1', 'm1', 'orga-crew-1', 'proposed');
+    addAssignment('asg2', 'm1', 'orga-crew-2', 'proposed');
+
+    const crew = await app.inject({ method: 'GET', url: '/assignments', headers: as('orga-crew-1') });
+    expect(crew.json().assignments.map((a: any) => a.id)).toEqual(['asg1']);
+
+    const lead = await app.inject({ method: 'GET', url: '/assignments', headers: as('orga-lead-1') });
+    expect(lead.json().assignments.map((a: any) => a.id).sort()).toEqual(['asg1', 'asg2']);
+
+    const filtered = await app.inject({
+      method: 'GET', url: '/assignments?mission_id=m1&mine=1', headers: as('orga-crew-2'),
+    });
+    expect(filtered.json().assignments.map((a: any) => a.id)).toEqual(['asg2']);
+  });
 });

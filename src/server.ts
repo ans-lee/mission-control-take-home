@@ -2,12 +2,12 @@ import Fastify from 'fastify';
 import { z } from 'zod';
 import { auth, requireRole } from './services/auth.js';
 import { newId } from './db/ids.js';
-import { listOrgUsers, listOrgMissions, listOrgCrew, listOrgSkills, requireOrgMission } from './db/queries.js';
-import { transition, createMission, ACTIONS } from './services/mission.js';
+import { listOrgUsers, listOrgMissions, listOrgCrew, listOrgSkills, listMissionRequirements, requireOrgMission } from './db/queries.js';
+import { transition, createMission, patchMission, patchMissionSchema, ACTIONS } from './services/mission.js';
 import { getMatches } from './services/matcher.js';
 import {
   addRequirement, requirementSchema, removeRequirement,
-  proposeAssignment, proposeSchema,
+  proposeAssignment, proposeSchema, listAssignments,
   respondToAssignment, respondSchema,
 } from './services/assignments.js';
 import {
@@ -46,7 +46,8 @@ export function buildServer() {
 
   app.get('/missions/:id', async (req, _reply) => {
     const { id } = req.params as { id: string };
-    return { mission: requireOrgMission(id, req.actor.org_id) };
+    const mission = requireOrgMission(id, req.actor.org_id);
+    return { mission, requirements: listMissionRequirements(id) };
   });
 
   // Create -> draft. org_id always from actor. lead+ only.
@@ -68,6 +69,16 @@ export function buildServer() {
       end_date,
     });
     return { mission };
+  });
+
+  // Edit title/dates. lead+ only, draft|proposed only.
+  app.patch('/missions/:id', { preHandler: requireRole('lead') }, async (req) => {
+    const { id } = req.params as { id: string };
+    const parsed = patchMissionSchema.safeParse(req.body);
+    if (!parsed.success) {
+      throw { statusCode: 400, code: 'BAD_REQUEST', message: parsed.error.message };
+    }
+    return { mission: patchMission(id, parsed.data, req.actor) };
   });
 
   // Lifecycle transitions. lead+ only, SoD enforced inside transition().
@@ -107,6 +118,17 @@ export function buildServer() {
       throw { statusCode: 400, code: 'BAD_REQUEST', message: parsed.error.message };
     }
     return { assignment: proposeAssignment(parsed.data, req.actor) };
+  });
+
+  // Assignments list: crew sees own; lead/director see org-wide. Optional mission filter + mine.
+  app.get('/assignments', async (req) => {
+    const q = req.query as { mission_id?: string; mine?: string };
+    return {
+      assignments: listAssignments(req.actor, {
+        mission_id: q.mission_id,
+        mine: q.mine === '1' || q.mine === 'true',
+      }),
+    };
   });
 
   // Respond: assignee own or director override. Mission in proposed|approved|active.

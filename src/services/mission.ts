@@ -1,6 +1,8 @@
 import { getDb } from '../db/client.js';
 import type { Actor } from './auth.js';
 import { assertSameOrg } from './auth.js';
+import { dateSchema } from '../schemas.js';
+import { z } from 'zod';
 
 // Single transition table owns Section 6 diagram. Handlers must call transition().
 // Adding an action = one entry here; routes derive from ACTIONS below.
@@ -83,4 +85,39 @@ export function createMission(
      VALUES (?, ?, ?, 'draft', ?, ?, ?)`,
   ).run(input.id, actor.org_id, input.title, input.start_date, input.end_date, actor.id);
   return db.prepare('SELECT * FROM missions WHERE id = ?').get(input.id) as MissionRow;
+}
+
+export const patchMissionSchema = z
+  .object({
+    title: z.string().min(1).max(200).optional(),
+    start_date: dateSchema.optional(),
+    end_date: dateSchema.optional(),
+  })
+  .refine((o) => o.title !== undefined || o.start_date !== undefined || o.end_date !== undefined, {
+    message: 'nothing to update',
+  });
+
+export function patchMission(missionId: string, input: z.infer<typeof patchMissionSchema>, actor: Actor): MissionRow {
+  const db = getDb();
+  const mission = db.prepare('SELECT * FROM missions WHERE id = ?').get(missionId) as MissionRow | undefined;
+  if (!mission) throw { statusCode: 404, code: 'NOT_FOUND', message: 'not found' };
+  assertSameOrg(actor.org_id, mission.org_id);
+  if (mission.status !== 'draft' && mission.status !== 'proposed') {
+    throw { statusCode: 409, code: 'INVALID_TRANSITION', message: 'missions editable in draft|proposed only' };
+  }
+  const next = {
+    title: input.title ?? mission.title,
+    start_date: input.start_date ?? mission.start_date,
+    end_date: input.end_date ?? mission.end_date,
+  };
+  if (next.start_date > next.end_date) {
+    throw { statusCode: 400, code: 'BAD_REQUEST', message: 'start_date > end_date' };
+  }
+  db.prepare('UPDATE missions SET title = ?, start_date = ?, end_date = ? WHERE id = ?').run(
+    next.title,
+    next.start_date,
+    next.end_date,
+    missionId,
+  );
+  return db.prepare('SELECT * FROM missions WHERE id = ?').get(missionId) as MissionRow;
 }
