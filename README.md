@@ -85,8 +85,8 @@ npm run cli -- --as <id> assignments list [--mission <mission-id>] [--mine]
 npm run cli -- --as <id> assignments propose <mission-id> <user-id>
 npm run cli -- --as <id> assignments respond <assignment-id> --accept|--decline
 
-# crew
-npm run cli -- --as <id> crew list
+# crew (staffing list is users filtered by role)
+npm run cli -- --as <id> crew list                  # → GET /users?role=crew
 npm run cli -- --as <id> crew profile <user-id>
 npm run cli -- --as <id> crew skills <user-id> --skill <skill-id> --level <1-5>
 
@@ -107,7 +107,7 @@ Human tables by default; errors print as `[CODE] message`
 
 | Method | Path | Role |
 |---|---|---|
-| GET | `/users`, `/missions`, `/missions/:id` (+`requirements[]`) | any (org-scoped, cross-org → 404) |
+| GET | `/users[?role=crew\|lead\|director]`, `/missions`, `/missions/:id` (+`requirements[]`) | any (org-scoped, cross-org → 404) |
 | POST / PATCH | `/missions` / `/missions/:id` (title/dates) | lead+, edit in draft\|proposed only |
 | POST | `/missions/:id/submit\|approve\|reject\|activate\|complete\|cancel` | lead+, SoD on approve/reject |
 | GET | `/missions/:id/matches` | lead+, draft\|proposed only |
@@ -116,7 +116,7 @@ Human tables by default; errors print as `[CODE] message`
 | POST | `/assignments/:id/respond` | assignee or director |
 | GET | `/skills` | any (open catalog — see below) |
 | POST | `/skills` | director |
-| GET | `/crew`, `GET /users/:id`, `PATCH /users/:id/skills` | scoped; skills own-or-director |
+| GET | `/users/:id`, `PATCH /users/:id/skills` | scoped; skills own-or-director |
 | GET/POST/DELETE | `/availability` | own; lead/director view, director delete override |
 
 Errors: `{error:{code,message}}`. 401 anon, 403 role/SoD, 404 scoped (no org

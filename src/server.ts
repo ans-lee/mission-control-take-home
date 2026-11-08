@@ -2,7 +2,7 @@ import Fastify from 'fastify';
 import { z } from 'zod';
 import { auth, requireRole } from './services/auth.js';
 import { newId } from './db/ids.js';
-import { listOrgUsers, listOrgMissions, listOrgCrew, listOrgSkills, listMissionRequirements, requireOrgMission } from './db/queries.js';
+import { listOrgUsers, listOrgMissions, listOrgSkills, listMissionRequirements, requireOrgMission } from './db/queries.js';
 import { transition, createMission, patchMission, patchMissionSchema, ACTIONS } from './services/mission.js';
 import { getMatches } from './services/matcher.js';
 import {
@@ -34,9 +34,13 @@ export function buildServer() {
   // All routes require auth. Attaches req.actor.
   app.addHook('onRequest', auth);
 
-  // Scoped user list for CLI --as discovery. Same org only.
+  // Scoped user list. ?role=crew|lead|director filters; default all (for --as discovery).
   app.get('/users', async (req) => {
-    return { users: listOrgUsers(req.actor.org_id) };
+    const q = req.query as { role?: string };
+    if (q.role !== undefined && !['crew', 'lead', 'director'].includes(q.role)) {
+      throw { statusCode: 400, code: 'BAD_REQUEST', message: 'invalid role filter' };
+    }
+    return { users: listOrgUsers(req.actor.org_id, q.role) };
   });
 
   // Missions scoped to actor org.
@@ -153,10 +157,7 @@ export function buildServer() {
     return { skill: createSkill(parsed.data.name, req.actor) };
   });
 
-  // Crew: scoped list + profile (own or lead+).
-  app.get('/crew', async (req) => {
-    return { crew: listOrgCrew(req.actor.org_id) };
-  });
+  // Crew profile (own or lead+). Staffing list is GET /users?role=crew.
   app.get('/users/:id', async (req) => {
     const { id } = req.params as { id: string };
     return { user: getUserProfile(id, req.actor) };

@@ -46,4 +46,16 @@ describe('tenancy', () => {
     const body = res.json();
     expect(body.missions.map((m: any) => m.id)).toEqual(['m-a']);
   });
+
+  it('users ?role filters, invalid role 400', async () => {
+    const app = buildServer();
+    const crew = await app.inject({
+      method: 'GET', url: '/users?role=crew', headers: { 'x-user-id': 'orga-lead-1' },
+    });
+    expect(crew.json().users.map((u: any) => u.id)).toEqual(['orga-crew-1']);
+    const bad = await app.inject({
+      method: 'GET', url: '/users?role=admin', headers: { 'x-user-id': 'orga-lead-1' },
+    });
+    expect(bad.statusCode).toBe(400);
+  });
 });

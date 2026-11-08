@@ -31,16 +31,15 @@ export function findUser(id: string): UserRow | undefined {
   return { ...row, role: parsed.data };
 }
 
-export function listOrgUsers(org_id: string): { id: string; name: string; role: string }[] {
+export function listOrgUsers(org_id: string, role?: string): { id: string; name: string; role: string }[] {
+  if (role === 'crew' || role === 'lead' || role === 'director') {
+    return getDb()
+      .prepare('SELECT id, name, role FROM users WHERE org_id = ? AND role = ? ORDER BY id')
+      .all(org_id, role) as { id: string; name: string; role: string }[];
+  }
   return getDb()
     .prepare('SELECT id, name, role FROM users WHERE org_id = ? ORDER BY id')
     .all(org_id) as { id: string; name: string; role: string }[];
-}
-
-export function listOrgCrew(org_id: string): { id: string; name: string }[] {
-  return getDb()
-    .prepare("SELECT id, name FROM users WHERE org_id = ? AND role = 'crew' ORDER BY id")
-    .all(org_id) as { id: string; name: string }[];
 }
 
 export function listOrgSkills(org_id: string): { id: string; name: string }[] {

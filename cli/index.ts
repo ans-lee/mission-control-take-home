@@ -141,9 +141,9 @@ asg
       print(opts(), await api(opts(), 'POST', `/assignments/${aid}/respond`, { accept: !!c.accept })));
   });
 
-// ---- crew / skills ----
+// ---- crew / skills (staffing list is users filtered by role) ----
 const crew = program.command('crew').description('crew profiles');
-crew.command('list').action(() => run(async () => print(opts(), await api(opts(), 'GET', '/crew'))));
+crew.command('list').action(() => run(async () => print(opts(), await api(opts(), 'GET', '/users?role=crew'))));
 crew
   .command('profile <user-id>')
   .action((uid) => run(async () => print(opts(), await api(opts(), 'GET', `/users/${uid}`))));
