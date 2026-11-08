@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { auth, requireRole } from './services/auth.js';
 import { listOrgUsers, listOrgMissions, listOrgCrew, listOrgSkills, requireOrgMission } from './db/queries.js';
-import { transition, createMission, type MissionAction } from './services/lifecycle.js';
+import { transition, createMission, type MissionAction } from './services/mission.js';
 import { getMatches } from './services/matcher.js';
 import {
   addRequirement, requirementSchema,

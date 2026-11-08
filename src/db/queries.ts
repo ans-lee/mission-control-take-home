@@ -6,7 +6,7 @@ import { roleSchema } from '../schemas.js';
  *  auth gate below. Request/response validation stays at API boundaries via zod.
  *
  *  Scope rule: queries.ts holds reusable scoped READS only (no writes, no domain
- *  rules). State transitions stay in services/lifecycle.ts, scoring joins stay in
+ *  rules). State transitions stay in services/mission.ts, scoring joins stay in
  *  services/matcher.ts — colocated with the invariant they enforce.
  */
 
