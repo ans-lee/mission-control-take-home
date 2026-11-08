@@ -5,6 +5,11 @@ import { auth, requireRole } from './services/auth.js';
 import { listOrgUsers, listOrgMissions, requireOrgMission } from './db/queries.js';
 import { transition, createMission, type MissionAction } from './services/lifecycle.js';
 import { getMatches } from './services/matcher.js';
+import {
+  addRequirement, requirementSchema,
+  proposeAssignment, proposeSchema,
+  respondToAssignment, respondSchema,
+} from './services/assignments.js';
 import { dateSchema, assertDateRange } from './schemas.js';
 
 const createMissionSchema = z.object({
@@ -82,6 +87,35 @@ export function buildServer() {
   app.get('/missions/:id/matches', { preHandler: requireRole('lead') }, async (req) => {
     const { id } = req.params as { id: string };
     return { matches: getMatches(id, req.actor) };
+  });
+
+  // Requirements: lead+ only. Body {skill (name or id), min_level, min_count}.
+  app.post('/missions/:id/requirements', { preHandler: requireRole('lead') }, async (req) => {
+    const { id } = req.params as { id: string };
+    const parsed = requirementSchema.safeParse(req.body);
+    if (!parsed.success) {
+      throw { statusCode: 400, code: 'BAD_REQUEST', message: parsed.error.message };
+    }
+    return { requirement: addRequirement(id, parsed.data, req.actor) };
+  });
+
+  // Propose: lead+ only, draft|proposed only. Snapshots matcher score/reasons.
+  app.post('/assignments', { preHandler: requireRole('lead') }, async (req) => {
+    const parsed = proposeSchema.safeParse(req.body);
+    if (!parsed.success) {
+      throw { statusCode: 400, code: 'BAD_REQUEST', message: parsed.error.message };
+    }
+    return { assignment: proposeAssignment(parsed.data, req.actor) };
+  });
+
+  // Respond: assignee own or director override. Mission in proposed|approved|active.
+  app.post('/assignments/:id/respond', async (req) => {
+    const { id } = req.params as { id: string };
+    const parsed = respondSchema.safeParse(req.body);
+    if (!parsed.success) {
+      throw { statusCode: 400, code: 'BAD_REQUEST', message: parsed.error.message };
+    }
+    return { assignment: respondToAssignment(id, parsed.data.accept, req.actor) };
   });
 
   return app;
