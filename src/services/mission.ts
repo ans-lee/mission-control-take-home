@@ -37,7 +37,7 @@ export function transition(missionId: string, action: MissionAction, actor: Acto
   assertSameOrg(actor.org_id, mission.org_id);
 
   const rule = TABLE[action];
-  if (!rule.from.includes(mission.status)) {
+  if (!(rule.from as readonly string[]).includes(mission.status)) {
     throw {
       statusCode: 409,
       code: 'INVALID_TRANSITION',
