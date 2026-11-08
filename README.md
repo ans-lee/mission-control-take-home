@@ -89,7 +89,7 @@ npm run cli -- --as <id> assignments respond <assignment-id> --accept|--decline
 # crew (staffing list is users filtered by role)
 npm run cli -- --as <id> crew list                  # → GET /users?role=crew
 npm run cli -- --as <id> crew profile <user-id>
-npm run cli -- --as <id> crew skills <user-id> --skill <name-or-id> --level <1-5>
+npm run cli -- --as <id> crew skills <user-id> --skill <skill-id> --level <1-5>   # ID only (no name alias)
 
 # skills
 npm run cli -- --as <id> skills list

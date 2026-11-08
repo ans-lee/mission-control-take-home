@@ -149,7 +149,7 @@ crew
   .action((uid) => run(async () => print(opts(), await api(opts(), 'GET', `/users/${uid}`))));
 crew
   .command('skills <user-id>')
-  .requiredOption('--skill <name-or-id>')
+  .requiredOption('--skill <skill-id>')
   .requiredOption('--level <n>')
   .action((uid, c) =>
     run(async () =>
