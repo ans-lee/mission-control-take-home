@@ -5,15 +5,20 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-export const DB_PATH =
-  process.env.MC_DB ?? join(__dirname, '..', '..', 'mission-control.db');
+export function dbPath(): string {
+  return process.env.MC_DB ?? join(__dirname, '..', '..', 'mission-control.db');
+}
 
 let db: Database.Database | null = null;
+let dbPathOpen: string | null = null;
 
 export function getDb(): Database.Database {
-  if (!db) {
-    db = new Database(DB_PATH);
+  const want = dbPath();
+  if (!db || dbPathOpen !== want) {
+    try { db?.close(); } catch { /* reopening */ }
+    db = new Database(want);
     db.pragma('foreign_keys = ON');
+    dbPathOpen = want;
   }
   return db;
 }
@@ -38,6 +43,7 @@ export function resetDb(): Database.Database {
 }
 
 export function closeDb(): void {
-  db?.close();
+  try { db?.close(); } catch { /* ignore */ }
   db = null;
+  dbPathOpen = null;
 }
