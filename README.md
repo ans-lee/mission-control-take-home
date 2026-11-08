@@ -144,35 +144,35 @@ demo token; dates are TEXT `YYYY-MM-DD` inclusive UTC days; tests run on
 `queries.ts` with zod at API boundaries and role validated at the auth gate.
 
 Actual deviations and additions:
-- `GET /skills` open to all org members (§8 said director). Leads need it for
+- `GET /skills` open to all org members (Section 8 said director). Leads need it for
   requirements; peer skill visibility is low-risk (no PII). Writes stay
   director-only.
-- Dropped `GET /crew` in favor of `GET /users?role=crew|lead|director` (§8
+- Dropped `GET /crew` in favor of `GET /users?role=crew|lead|director` (Section 8
   listed `/crew`). One filtered list instead of two parallel concepts; `crew
   list` in the CLI is an alias for `?role=crew`.
-- Added `PATCH /missions/:id` (title/dates). §5 promised lead `edit` but §8
+- Added `PATCH /missions/:id` (title/dates). Section 5 promised lead `edit` but Section 8
   omitted it; without it a typo means a dead mission. Lead+, `draft|proposed`
   only.
-- Added `GET /assignments[?mission_id][?mine]` (§8 omitted). Crew sees own,
+- Added `GET /assignments[?mission_id][?mine]` (Section 8 omitted). Crew sees own,
   lead+ sees org-wide. Without it an assignee can't discover what to respond to.
-- Requirements are upsert + delete with a `draft|proposed` lock (§8 listed only
+- Requirements are upsert + delete with a `draft|proposed` lock (Section 8 listed only
   `POST`; no lock). `POST` upserts, `DELETE .../:skill` removes. Editing an
   approved mission would invalidate SoD review, so both return 409 after approval.
-- `GET /missions/:id` embeds `requirements[]` (§8 unspecified). Otherwise `add`
+- `GET /missions/:id` embeds `requirements[]` (Section 8 unspecified). Otherwise `add`
   has no read-back except via `match` gaps.
 - Layout: routes consolidated in `src/server.ts` instead of `src/routes/*.ts`,
-  and `services/lifecycle.ts` renamed to `services/mission.ts` (§11). `TABLE`
+  and `services/lifecycle.ts` renamed to `services/mission.ts` (Section 11). `TABLE`
   is the single source — `ACTIONS` derives from its keys, routes loop over it,
   so a new transition is one TABLE entry.
 - CLI: `crew skills <user-id> --skill <skill-id>` takes a positional user
-  (§9 sketched `skills set`), plus added `missions edit`, `requirements
+  (Section 9 sketched `skills set`), plus added `missions edit`, `requirements
   remove`, `assignments list` to match the API additions above. `crew skills`
   is ID-only (no name alias); `requirements add --skill` accepts name-or-id
-  per §9 (`--skill <name>`).
-- OrgB seed is minimal (1 lead, 2 crew) vs §10 spec of 2+5 — sufficient for the
+  per Section 9 (`--skill <name>`).
+- OrgB seed is minimal (1 lead, 2 crew) vs Section 10 spec of 2+5 — sufficient for the
   404 isolation test.
 - Matcher tests isolate `m0-base` to 12-11..12 (M2-only overlap) so M1 shows
-  ranking+gaps; seed keeps 12-04..08 (overlaps both) per §10 "only 1 qualified".
+  ranking+gaps; seed keeps 12-04..08 (overlaps both) per Section 10 "only 1 qualified".
 
 ## Layout
 
