@@ -4,6 +4,10 @@ import { roleSchema } from '../schemas.js';
 /** Thin typed reads. All tenant scoping lives here — callers never inline org filters.
  *  DB rows are trusted (schema.sql CHECKs enforce shapes); we cast except at the
  *  auth gate below. Request/response validation stays at API boundaries via zod.
+ *
+ *  Scope rule: queries.ts holds reusable scoped READS only (no writes, no domain
+ *  rules). State transitions stay in services/lifecycle.ts, scoring joins stay in
+ *  services/matcher.ts — colocated with the invariant they enforce.
  */
 
 export interface UserRow {
