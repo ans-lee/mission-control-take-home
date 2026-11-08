@@ -1,6 +1,16 @@
 import Fastify from 'fastify';
+import { randomUUID } from 'node:crypto';
+import { z } from 'zod';
 import { getDb } from './db/client.js';
-import { auth, assertSameOrg } from './services/auth.js';
+import { auth, assertSameOrg, requireRole } from './services/auth.js';
+import { transition, createMission, type MissionAction } from './services/lifecycle.js';
+import { dateSchema, assertDateRange } from './schemas.js';
+
+const createMissionSchema = z.object({
+  title: z.string().min(1).max(200),
+  start_date: dateSchema,
+  end_date: dateSchema,
+});
 
 export function buildServer() {
   const app = Fastify({ logger: false });
@@ -41,6 +51,44 @@ export function buildServer() {
     assertSameOrg(req.actor.org_id, row.org_id);
     return { mission: row };
   });
+
+  // Create -> draft. org_id always from actor. lead+ only.
+  app.post('/missions', { preHandler: requireRole('lead') }, async (req) => {
+    const parsed = createMissionSchema.safeParse(req.body);
+    if (!parsed.success) {
+      throw { statusCode: 400, code: 'BAD_REQUEST', message: parsed.error.message };
+    }
+    const { title, start_date, end_date } = parsed.data;
+    try {
+      assertDateRange(start_date, end_date);
+    } catch {
+      throw { statusCode: 400, code: 'BAD_REQUEST', message: 'start_date > end_date' };
+    }
+    const mission = createMission(req.actor, {
+      id: `m_${randomUUID().slice(0, 8)}`,
+      title,
+      start_date,
+      end_date,
+    });
+    return { mission };
+  });
+
+  // Lifecycle transitions. lead+ only, SoD enforced inside transition().
+  const ACTIONS: MissionAction[] = [
+    'submit',
+    'approve',
+    'reject',
+    'activate',
+    'complete',
+    'cancel',
+  ];
+  for (const action of ACTIONS) {
+    app.post(`/missions/:id/${action}`, { preHandler: requireRole('lead') }, async (req) => {
+      const { id } = req.params as { id: string };
+      const mission = transition(id, action, req.actor);
+      return { mission };
+    });
+  }
 
   return app;
 }
