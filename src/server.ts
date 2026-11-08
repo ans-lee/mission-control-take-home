@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { getDb } from './db/client.js';
 import { auth, assertSameOrg, requireRole } from './services/auth.js';
 import { transition, createMission, type MissionAction } from './services/lifecycle.js';
+import { getMatches } from './services/matcher.js';
 import { dateSchema, assertDateRange } from './schemas.js';
 
 const createMissionSchema = z.object({
@@ -89,6 +90,12 @@ export function buildServer() {
       return { mission };
     });
   }
+
+  // Matcher: lead+ only, draft|proposed only (409 after approval).
+  app.get('/missions/:id/matches', { preHandler: requireRole('lead') }, async (req) => {
+    const { id } = req.params as { id: string };
+    return { matches: getMatches(id, req.actor) };
+  });
 
   return app;
 }
