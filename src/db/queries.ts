@@ -1,6 +1,10 @@
 import { getDb } from './client.js';
+import { roleSchema } from '../schemas.js';
 
-/** Thin typed reads. All tenant scoping lives here — callers never inline org filters. */
+/** Thin typed reads. All tenant scoping lives here — callers never inline org filters.
+ *  DB rows are trusted (schema.sql CHECKs enforce shapes); we cast except at the
+ *  auth gate below. Request/response validation stays at API boundaries via zod.
+ */
 
 export interface UserRow {
   id: string;
@@ -10,9 +14,17 @@ export interface UserRow {
 }
 
 export function findUser(id: string): UserRow | undefined {
-  return getDb()
+  const row = getDb()
     .prepare('SELECT id, org_id, role, name FROM users WHERE id = ?')
     .get(id) as UserRow | undefined;
+  if (!row) return undefined;
+  // Auth gate: validate role enum instead of trusting the cast.
+  // A bad role here would escalate privileges, so fail closed with 500.
+  const parsed = roleSchema.safeParse(row.role);
+  if (!parsed.success) {
+    throw { statusCode: 500, code: 'INTERNAL', message: `invalid role in db for ${id}` };
+  }
+  return { ...row, role: parsed.data };
 }
 
 export function listOrgUsers(org_id: string): { id: string; name: string; role: string }[] {
