@@ -12,7 +12,7 @@ Requires Node 22+.
 npm install
 npm run seed   # reset mission-control.db with representative data
 npm run api    # Fastify on :3000 (PORT=3100 npm run api for another port)
-npm test       # 27 tests (tenancy, SoD, lifecycle, matcher, assignments, roster)
+npm test       # 32 tests (tenancy, SoD, lifecycle, matcher, assignments, roster, CLI)
 ```
 
 ## Seed story
@@ -37,11 +37,9 @@ npm run cli -- --as orga-lead-1 users
 npm run cli -- --as orga-lead-1 missions list
 npm run cli -- --as orga-lead-1 skills list
 
-# plan → match → propose → approve (SoD demo)
+# plan → match → propose → approve (SoD demo — happy path, no removes)
 npm run cli -- --as orga-lead-1 missions create --title "Relay fix" --start 2027-02-01 --end 2027-02-05
-npm run cli -- --as orga-lead-1 missions edit <mission-id> --title "Relay fix v2"
 npm run cli -- --as orga-lead-1 requirements add <mission-id> --skill piloting --min-level 3 --count 1
-npm run cli -- --as orga-lead-1 requirements remove <mission-id> --skill piloting
 npm run cli -- --as orga-lead-1 match <mission-id>
 npm run cli -- --as orga-lead-1 assignments propose <mission-id> orga-crew-1
 npm run cli -- --as orga-lead-1 assignments list --mission <mission-id>
@@ -51,8 +49,11 @@ npm run cli -- --as orga-lead-1 missions approve <mission-id>  # fails: [SELF_AP
 npm run cli -- --as orga-lead-2 missions approve <mission-id>  # succeeds (peer)
 npm run cli -- --as orga-crew-1 assignments respond <assignment-id> --accept
 
+# iterate (only in draft|proposed — locked after approval)
+npm run cli -- --as orga-lead-1 missions edit <mission-id> --title "Relay fix v2"
+npm run cli -- --as orga-lead-1 requirements remove <mission-id> --skill piloting
+
 # roster / availability
-npm run cli -- --as orga-crew-1 crew profile orga-crew-1
 npm run cli -- --as orga-director skills add medical
 npm run cli -- --as orga-crew-1 availability add --start 2026-12-20 --end 2026-12-22 --reason rest
 npm run cli -- --as orga-crew-1 availability list
