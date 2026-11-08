@@ -2,23 +2,19 @@ import { getDb } from '../db/client.js';
 import type { Actor } from './auth.js';
 import { assertSameOrg } from './auth.js';
 
-export type MissionAction =
-  | 'submit'
-  | 'approve'
-  | 'reject'
-  | 'activate'
-  | 'complete'
-  | 'cancel';
-
-// Single transition table owns Section 6 diagram. Handlers must call this.
-const TABLE: Record<MissionAction, { from: string[]; to: string }> = {
+// Single transition table owns Section 6 diagram. Handlers must call transition().
+// Adding an action = one entry here; routes derive from ACTIONS below.
+const TABLE = {
   submit: { from: ['draft', 'rejected'], to: 'proposed' },
   approve: { from: ['proposed'], to: 'approved' },
   reject: { from: ['proposed'], to: 'rejected' },
   activate: { from: ['approved'], to: 'active' },
   complete: { from: ['active'], to: 'completed' },
   cancel: { from: ['approved', 'active'], to: 'cancelled' },
-};
+} as const;
+
+export type MissionAction = keyof typeof TABLE;
+export const ACTIONS = Object.keys(TABLE) as MissionAction[];
 
 export interface MissionRow {
   id: string;

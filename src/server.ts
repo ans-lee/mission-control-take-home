@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { auth, requireRole } from './services/auth.js';
 import { listOrgUsers, listOrgMissions, listOrgCrew, listOrgSkills, requireOrgMission } from './db/queries.js';
-import { transition, createMission, type MissionAction } from './services/mission.js';
+import { transition, createMission, ACTIONS } from './services/mission.js';
 import { getMatches } from './services/matcher.js';
 import {
   addRequirement, requirementSchema,
@@ -71,14 +71,7 @@ export function buildServer() {
   });
 
   // Lifecycle transitions. lead+ only, SoD enforced inside transition().
-  const ACTIONS: MissionAction[] = [
-    'submit',
-    'approve',
-    'reject',
-    'activate',
-    'complete',
-    'cancel',
-  ];
+  // Routes derive from TABLE keys so adding an action needs no glue edit.
   for (const action of ACTIONS) {
     app.post(`/missions/:id/${action}`, { preHandler: requireRole('lead') }, async (req) => {
       const { id } = req.params as { id: string };
