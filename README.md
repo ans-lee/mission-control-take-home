@@ -135,17 +135,44 @@ echo "mission=$MID assignee=$UID assignment=$AID"
 Errors: `{error:{code,message}}`. 401 anon, 403 role/SoD, 404 scoped (no org
 probe), 409 bad transition/duplicate.
 
-## Notes / deviations
+## Notes / deviations from DESIGN.md
 
-- `GET /skills` is open to all org members (DESIGN said director). Leads need
-  it for requirements; crew seeing peer skills is low-risk (no PII).
-- OrgB seed is minimal (1 lead, 2 crew) vs spec 2+5 — sufficient for the 404
-  isolation test.
+Decisions that concretize the design (not deviations): readable TEXT ids
+(`orga-lead-1`, `m_...`, `asg_...` via `src/db/ids.ts`) since `x-user-id` is the
+demo token; dates are TEXT `YYYY-MM-DD` inclusive UTC days; tests run on
+`:memory:` SQLite so `npm test` never touches `mission-control.db`; casts in
+`queries.ts` with zod at API boundaries and role validated at the auth gate.
+
+Actual deviations and additions:
+- `GET /skills` open to all org members (§8 said director). Leads need it for
+  requirements; peer skill visibility is low-risk (no PII). Writes stay
+  director-only.
+- Dropped `GET /crew` in favor of `GET /users?role=crew|lead|director` (§8
+  listed `/crew`). One filtered list instead of two parallel concepts; `crew
+  list` in the CLI is an alias for `?role=crew`.
+- Added `PATCH /missions/:id` (title/dates). §5 promised lead `edit` but §8
+  omitted it; without it a typo means a dead mission. Lead+, `draft|proposed`
+  only.
+- Added `GET /assignments[?mission_id][?mine]` (§8 omitted). Crew sees own,
+  lead+ sees org-wide. Without it an assignee can't discover what to respond to.
+- Requirements are upsert + delete with a `draft|proposed` lock (§8 listed only
+  `POST`; no lock). `POST` upserts, `DELETE .../:skill` removes. Editing an
+  approved mission would invalidate SoD review, so both return 409 after approval.
+- `GET /missions/:id` embeds `requirements[]` (§8 unspecified). Otherwise `add`
+  has no read-back except via `match` gaps.
+- Layout: routes consolidated in `src/server.ts` instead of `src/routes/*.ts`,
+  and `services/lifecycle.ts` renamed to `services/mission.ts` (§11). `TABLE`
+  is the single source — `ACTIONS` derives from its keys, routes loop over it,
+  so a new transition is one TABLE entry.
+- CLI: `crew skills <user-id> --skill <skill-id>` takes a positional user
+  (§9 sketched `skills set`), plus added `missions edit`, `requirements
+  remove`, `assignments list` to match the API additions above. `crew skills`
+  is ID-only (no name alias); `requirements add --skill` accepts name-or-id
+  per §9 (`--skill <name>`).
+- OrgB seed is minimal (1 lead, 2 crew) vs §10 spec of 2+5 — sufficient for the
+  404 isolation test.
 - Matcher tests isolate `m0-base` to 12-11..12 (M2-only overlap) so M1 shows
-  ranking+gaps; seed keeps 12-04..08 (overlaps both) per spec "only 1 qualified".
-- DB: `better-sqlite3`, no ORM (guardrail). Shared reads in
-  `src/db/queries.ts`; domain SQL stays with its service. Casts in queries,
-  zod at API boundaries, role validated at the auth gate.
+  ranking+gaps; seed keeps 12-04..08 (overlaps both) per §10 "only 1 qualified".
 
 ## Layout
 
