@@ -16,6 +16,9 @@ export function addRequirement(missionId: string, input: z.infer<typeof requirem
   const mission = db.prepare('SELECT * FROM missions WHERE id = ?').get(missionId) as any;
   if (!mission) throw { statusCode: 404, code: 'NOT_FOUND', message: 'not found' };
   assertSameOrg(actor.org_id, mission.org_id);
+  if (mission.status !== 'draft' && mission.status !== 'proposed') {
+    throw { statusCode: 409, code: 'INVALID_TRANSITION', message: 'requirements editable in draft|proposed only' };
+  }
 
   // Resolve skill by id first, then by lowercased name (catalog stores lowercase).
   const key = input.skill.trim();
@@ -30,6 +33,26 @@ export function addRequirement(missionId: string, input: z.infer<typeof requirem
      ON CONFLICT (mission_id, skill_id) DO UPDATE SET min_level = excluded.min_level, min_count = excluded.min_count`,
   ).run(missionId, skill.id, input.min_level, input.min_count);
   return { mission_id: missionId, skill_id: skill.id, ...input };
+}
+
+export function removeRequirement(missionId: string, skill: string, actor: Actor) {
+  const db = getDb();
+  const mission = db.prepare('SELECT * FROM missions WHERE id = ?').get(missionId) as any;
+  if (!mission) throw { statusCode: 404, code: 'NOT_FOUND', message: 'not found' };
+  assertSameOrg(actor.org_id, mission.org_id);
+  if (mission.status !== 'draft' && mission.status !== 'proposed') {
+    throw { statusCode: 409, code: 'INVALID_TRANSITION', message: 'requirements editable in draft|proposed only' };
+  }
+  const key = skill.trim();
+  const row =
+    (db.prepare('SELECT * FROM skills WHERE id = ? AND org_id = ?').get(key, actor.org_id) as any) ??
+    (db.prepare('SELECT * FROM skills WHERE name = ? AND org_id = ?').get(key.toLowerCase(), actor.org_id) as any);
+  if (!row) throw { statusCode: 404, code: 'NOT_FOUND', message: 'skill not found' };
+  const del = db
+    .prepare('DELETE FROM mission_requirements WHERE mission_id = ? AND skill_id = ?')
+    .run(missionId, row.id);
+  if (del.changes === 0) throw { statusCode: 404, code: 'NOT_FOUND', message: 'requirement not found' };
+  return { deleted: row.id };
 }
 
 export const proposeSchema = z.object({

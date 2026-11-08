@@ -105,4 +105,31 @@ describe('assignments', () => {
     });
     expect(crew.statusCode).toBe(403);
   });
+
+  it('requirements: upsert updates, delete removes, locked after approval', async () => {
+    const app = buildServer();
+    const upd = await app.inject({
+      method: 'POST', url: '/missions/m1/requirements', headers: as('orga-lead-1'),
+      payload: { skill: 'piloting', min_level: 5, min_count: 2 },
+    });
+    expect(upd.json().requirement.min_level).toBe(5);
+
+    const del = await app.inject({
+      method: 'DELETE', url: '/missions/m1/requirements/piloting', headers: as('orga-lead-1'),
+    });
+    expect(del.json().deleted).toBe('orga-skill-piloting');
+
+    const gone = await app.inject({
+      method: 'DELETE', url: '/missions/m1/requirements/piloting', headers: as('orga-lead-1'),
+    });
+    expect(gone.statusCode).toBe(404);
+
+    await app.inject({ method: 'POST', url: '/missions/m1/submit', headers: as('orga-lead-1') });
+    await app.inject({ method: 'POST', url: '/missions/m1/approve', headers: as('orga-director') });
+    const locked = await app.inject({
+      method: 'POST', url: '/missions/m1/requirements', headers: as('orga-lead-1'),
+      payload: { skill: 'piloting', min_level: 2, min_count: 1 },
+    });
+    expect(locked.statusCode).toBe(409);
+  });
 });

@@ -6,7 +6,7 @@ import { listOrgUsers, listOrgMissions, listOrgCrew, listOrgSkills, requireOrgMi
 import { transition, createMission, ACTIONS } from './services/mission.js';
 import { getMatches } from './services/matcher.js';
 import {
-  addRequirement, requirementSchema,
+  addRequirement, requirementSchema, removeRequirement,
   proposeAssignment, proposeSchema,
   respondToAssignment, respondSchema,
 } from './services/assignments.js';
@@ -86,7 +86,7 @@ export function buildServer() {
     return { matches: getMatches(id, req.actor) };
   });
 
-  // Requirements: lead+ only. Body {skill (name or id), min_level, min_count}.
+  // Requirements: lead+ only, draft|proposed only. Upsert by skill, delete by skill.
   app.post('/missions/:id/requirements', { preHandler: requireRole('lead') }, async (req) => {
     const { id } = req.params as { id: string };
     const parsed = requirementSchema.safeParse(req.body);
@@ -94,6 +94,10 @@ export function buildServer() {
       throw { statusCode: 400, code: 'BAD_REQUEST', message: parsed.error.message };
     }
     return { requirement: addRequirement(id, parsed.data, req.actor) };
+  });
+  app.delete('/missions/:id/requirements/:skill', { preHandler: requireRole('lead') }, async (req) => {
+    const { id, skill } = req.params as { id: string; skill: string };
+    return removeRequirement(id, skill, req.actor);
   });
 
   // Propose: lead+ only, draft|proposed only. Snapshots matcher score/reasons.

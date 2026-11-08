@@ -60,10 +60,9 @@ for (const a of ['submit', 'approve', 'reject', 'activate', 'complete', 'cancel'
     .action((id) => run(async () => print(opts(), await api(opts(), 'POST', `/missions/${id}/${a}`))));
 }
 
-// ---- requirements ----
-program
-  .command('requirements')
-  .description('mission requirements')
+// ---- requirements (upsert by skill, editable in draft|proposed only) ----
+const reqs = program.command('requirements').description('mission requirements');
+reqs
   .command('add <mission-id>')
   .requiredOption('--skill <name>')
   .requiredOption('--min-level <n>', '', '3')
@@ -79,6 +78,12 @@ program
         }),
       ),
     ),
+  );
+reqs
+  .command('remove <mission-id>')
+  .requiredOption('--skill <name>')
+  .action((mid, c) =>
+    run(async () => print(opts(), await api(opts(), 'DELETE', `/missions/${mid}/requirements/${c.skill}`))),
   );
 
 // ---- match ----
