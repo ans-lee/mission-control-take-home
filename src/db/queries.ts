@@ -49,11 +49,15 @@ export function listOrgMissions(org_id: string): MissionListRow[] {
     .all(org_id) as MissionListRow[];
 }
 
+export interface MissionScopedRow extends MissionListRow {
+  org_id: string;
+}
+
 /** Returns mission or throws 404 (covers both missing + cross-org, no probing). */
-export function requireOrgMission(id: string, org_id: string): any {
+export function requireOrgMission(id: string, org_id: string): MissionScopedRow {
   const row = getDb()
     .prepare('SELECT id, org_id, title, status, start_date, end_date FROM missions WHERE id = ?')
-    .get(id) as any;
+    .get(id) as MissionScopedRow | undefined;
   if (!row || row.org_id !== org_id) {
     throw { statusCode: 404, code: 'NOT_FOUND', message: 'not found' };
   }
