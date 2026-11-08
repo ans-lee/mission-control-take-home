@@ -79,4 +79,13 @@ describe('lifecycle', () => {
     expect(res.statusCode).toBe(200);
     expect(res.json().mission.status).toBe('draft');
   });
+
+  it('single-day mission (start == end) is allowed', async () => {
+    const app = buildServer();
+    const res = await app.inject({
+      method: 'POST', url: '/missions', headers: as('orga-lead-1'),
+      payload: { title: 'one-day', start_date: '2027-01-01', end_date: '2027-01-01' },
+    });
+    expect(res.statusCode).toBe(200);
+  });
 });

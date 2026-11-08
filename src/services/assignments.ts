@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { getDb } from '../db/client.js';
+import { newId } from '../db/ids.js';
 import type { Actor } from './auth.js';
 import { assertSameOrg } from './auth.js';
 import { getMatches } from './matcher.js';
@@ -16,10 +17,11 @@ export function addRequirement(missionId: string, input: z.infer<typeof requirem
   if (!mission) throw { statusCode: 404, code: 'NOT_FOUND', message: 'not found' };
   assertSameOrg(actor.org_id, mission.org_id);
 
-  // Resolve skill by id first, then by name — both scoped to actor org.
+  // Resolve skill by id first, then by lowercased name (catalog stores lowercase).
+  const key = input.skill.trim();
   const skill =
-    (db.prepare('SELECT * FROM skills WHERE id = ? AND org_id = ?').get(input.skill, actor.org_id) as any) ??
-    (db.prepare('SELECT * FROM skills WHERE name = ? AND org_id = ?').get(input.skill, actor.org_id) as any);
+    (db.prepare('SELECT * FROM skills WHERE id = ? AND org_id = ?').get(key, actor.org_id) as any) ??
+    (db.prepare('SELECT * FROM skills WHERE name = ? AND org_id = ?').get(key.toLowerCase(), actor.org_id) as any);
   if (!skill) throw { statusCode: 404, code: 'NOT_FOUND', message: 'skill not found' };
 
   db.prepare(
@@ -63,7 +65,7 @@ export function proposeAssignment(input: z.infer<typeof proposeSchema>, actor: A
     reasons = JSON.stringify({ note: 'manual override' });
   }
 
-  const id = `asg_${Math.random().toString(36).slice(2, 10)}`;
+  const id = newId('asg_');
   try {
     db.prepare(
       `INSERT INTO assignments (id, mission_id, user_id, status, score, reasons)

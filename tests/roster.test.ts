@@ -80,6 +80,12 @@ describe('roster', () => {
     });
     expect(bad.statusCode).toBe(400);
 
+    const single = await app.inject({
+      method: 'POST', url: '/availability', headers: as('orga-crew-1'),
+      payload: { start_date: '2026-12-01', end_date: '2026-12-01' },
+    });
+    expect(single.statusCode).toBe(200);
+
     const created = await app.inject({
       method: 'POST', url: '/availability', headers: as('orga-crew-1'),
       payload: { start_date: '2026-12-01', end_date: '2026-12-03', reason: 'rest' },

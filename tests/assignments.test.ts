@@ -94,6 +94,11 @@ describe('assignments', () => {
       payload: { skill: 'piloting', min_level: 4, min_count: 1 },
     });
     expect(res.statusCode).toBe(200);
+    const upper = await app.inject({
+      method: 'POST', url: '/missions/m1/requirements', headers: as('orga-lead-1'),
+      payload: { skill: 'Piloting', min_level: 4, min_count: 1 },
+    });
+    expect(upper.statusCode).toBe(200);
     const crew = await app.inject({
       method: 'POST', url: '/missions/m1/requirements', headers: as('orga-crew-1'),
       payload: { skill: 'piloting', min_level: 2, min_count: 1 },

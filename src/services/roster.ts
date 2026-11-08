@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { getDb } from '../db/client.js';
+import { newId } from '../db/ids.js';
 import type { Actor } from './auth.js';
 import { assertSameOrg } from './auth.js';
 import { dateSchema, assertDateRange, levelSchema } from '../schemas.js';
@@ -81,7 +82,7 @@ export const createBlockSchema = z.object({
 
 export function createBlock(input: z.infer<typeof createBlockSchema>, actor: Actor) {
   assertDateRange(input.start_date, input.end_date);
-  const id = `blk_${Math.random().toString(36).slice(2, 10)}`;
+  const id = newId('blk_');
   getDb()
     .prepare(
       'INSERT INTO availability_blocks (id, user_id, start_date, end_date, reason) VALUES (?, ?, ?, ?, ?)',

@@ -1,7 +1,7 @@
 import Fastify from 'fastify';
-import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { auth, requireRole } from './services/auth.js';
+import { newId } from './db/ids.js';
 import { listOrgUsers, listOrgMissions, listOrgCrew, listOrgSkills, requireOrgMission } from './db/queries.js';
 import { transition, createMission, ACTIONS } from './services/mission.js';
 import { getMatches } from './services/matcher.js';
@@ -62,7 +62,7 @@ export function buildServer() {
       throw { statusCode: 400, code: 'BAD_REQUEST', message: 'start_date > end_date' };
     }
     const mission = createMission(req.actor, {
-      id: `m_${randomUUID().slice(0, 8)}`,
+      id: newId('m_'),
       title,
       start_date,
       end_date,
