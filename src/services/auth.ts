@@ -1,5 +1,5 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import { getDb } from '../db/client.js';
+import { findUser } from '../db/queries.js';
 
 export type Role = 'director' | 'lead' | 'crew';
 
@@ -24,9 +24,7 @@ export async function auth(req: FastifyRequest, _reply: FastifyReply): Promise<v
   if (typeof userId !== 'string' || userId.length === 0) {
     throw { statusCode: 401, code: 'UNAUTHORIZED', message: 'missing x-user-id' };
   }
-  const row = getDb()
-    .prepare('SELECT id, org_id, role, name FROM users WHERE id = ?')
-    .get(userId) as Actor | undefined;
+  const row = findUser(userId) as Actor | undefined;
   if (!row) {
     throw { statusCode: 401, code: 'UNAUTHORIZED', message: 'unknown user' };
   }

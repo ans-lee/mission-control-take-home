@@ -1,8 +1,8 @@
 import Fastify from 'fastify';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
-import { getDb } from './db/client.js';
-import { auth, assertSameOrg, requireRole } from './services/auth.js';
+import { auth, requireRole } from './services/auth.js';
+import { listOrgUsers, listOrgMissions, requireOrgMission } from './db/queries.js';
 import { transition, createMission, type MissionAction } from './services/lifecycle.js';
 import { getMatches } from './services/matcher.js';
 import { dateSchema, assertDateRange } from './schemas.js';
@@ -27,30 +27,17 @@ export function buildServer() {
 
   // Scoped user list for CLI --as discovery. Same org only.
   app.get('/users', async (req) => {
-    const rows = getDb()
-      .prepare('SELECT id, name, role FROM users WHERE org_id = ? ORDER BY id')
-      .all(req.actor.org_id);
-    return { users: rows };
+    return { users: listOrgUsers(req.actor.org_id) };
   });
 
   // Missions scoped to actor org.
   app.get('/missions', async (req) => {
-    const rows = getDb()
-      .prepare(
-        'SELECT id, title, status, start_date, end_date FROM missions WHERE org_id = ? ORDER BY id',
-      )
-      .all(req.actor.org_id);
-    return { missions: rows };
+    return { missions: listOrgMissions(req.actor.org_id) };
   });
 
   app.get('/missions/:id', async (req, _reply) => {
     const { id } = req.params as { id: string };
-    const row = getDb()
-      .prepare('SELECT id, org_id, title, status, start_date, end_date FROM missions WHERE id = ?')
-      .get(id) as any;
-    if (!row) throw { statusCode: 404, code: 'NOT_FOUND', message: 'not found' };
-    assertSameOrg(req.actor.org_id, row.org_id);
-    return { mission: row };
+    return { mission: requireOrgMission(id, req.actor.org_id) };
   });
 
   // Create -> draft. org_id always from actor. lead+ only.
