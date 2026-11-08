@@ -1,22 +1,19 @@
 import { describe, it, expect, beforeEach, afterAll } from 'vitest';
 import { buildServer } from '../src/server.js';
-import { resetDb, getDb, closeDb } from '../src/db/client.js';
+import { closeDb } from '../src/db/client.js';
+import { reset, addOrg, addUser, addMission } from './helpers.js';
 
 process.env.MC_DB = ':memory:';
 afterAll(() => closeDb());
 
 beforeEach(() => {
-  resetDb();
-  getDb().exec(`
-    INSERT INTO organisations (id, name) VALUES ('orga','A');
-    INSERT INTO users (id, org_id, role, name) VALUES
-      ('orga-director','orga','director','D'),
-      ('orga-lead-1','orga','lead','L1'),
-      ('orga-lead-2','orga','lead','L2');
-    INSERT INTO missions (id, org_id, title, status, start_date, end_date, created_by) VALUES
-      ('m1','orga','M1','draft','2026-12-01','2026-12-10','orga-lead-1'),
-      ('m2','orga','M2','draft','2026-12-01','2026-12-10','orga-director');
-  `);
+  reset();
+  addOrg('orga', 'A');
+  addUser('orga-director', 'orga', 'director');
+  addUser('orga-lead-1', 'orga', 'lead');
+  addUser('orga-lead-2', 'orga', 'lead');
+  addMission({ id: 'm1', org_id: 'orga', created_by: 'orga-lead-1' });
+  addMission({ id: 'm2', org_id: 'orga', created_by: 'orga-director' });
 });
 
 const as = (u: string) => ({ 'x-user-id': u });

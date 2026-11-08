@@ -1,50 +1,45 @@
 import { describe, it, expect, beforeEach, afterAll } from 'vitest';
 import { buildServer } from '../src/server.js';
-import { resetDb, getDb, closeDb } from '../src/db/client.js';
+import { getDb, closeDb } from '../src/db/client.js';
+import {
+  reset, addOrg, addUser, addSkill, setCrewSkill,
+  addMission, addRequirement, addBlock, addAssignment,
+} from './helpers.js';
 
 process.env.MC_DB = ':memory:';
 afterAll(() => closeDb());
 
 beforeEach(() => {
-  resetDb();
-  getDb().exec(`
-    INSERT INTO organisations (id, name) VALUES ('orga','A'), ('orgb','B');
-    INSERT INTO users (id, org_id, role, name) VALUES
-      ('orga-lead-1','orga','lead','L1'),
-      ('orga-crew-1','orga','crew','Cora'),
-      ('orga-crew-2','orga','crew','Cyrus'),
-      ('orga-crew-3','orga','crew','Cara'),
-      ('orga-crew-4','orga','crew','Mira'),
-      ('orga-crew-5','orga','crew','Eli'),
-      ('orgb-lead-1','orgb','lead','BL');
-    INSERT INTO skills (id, org_id, name) VALUES
-      ('orga-skill-piloting','orga','piloting'),
-      ('orga-skill-engineering','orga','engineering'),
-      ('orga-skill-medical','orga','medical');
-    INSERT INTO crew_skills (user_id, skill_id, level) VALUES
-      ('orga-crew-1','orga-skill-piloting',4),
-      ('orga-crew-2','orga-skill-piloting',2),
-      ('orga-crew-2','orga-skill-engineering',4),
-      ('orga-crew-3','orga-skill-piloting',4),
-      ('orga-crew-4','orga-skill-medical',4),
-      ('orga-crew-5','orga-skill-engineering',3),
-      ('orga-crew-5','orga-skill-medical',3);
-    INSERT INTO missions (id, org_id, title, status, start_date, end_date, created_by) VALUES
-      ('m0-base','orga','baseline','active','2026-12-11','2026-12-12','orga-lead-1'),
-      ('m1','orga','M1 gap','draft','2026-12-01','2026-12-10','orga-lead-1'),
-      ('m2','orga','M2 overlap','draft','2026-12-05','2026-12-12','orga-lead-1'),
-      ('m3','orga','M3 cover','draft','2027-01-05','2027-01-12','orga-lead-1'),
-      ('m-orgb','orgb','secret','draft','2026-12-01','2026-12-10','orgb-lead-1');
-    INSERT INTO mission_requirements (mission_id, skill_id, min_level, min_count) VALUES
-      ('m1','orga-skill-piloting',3,2),
-      ('m2','orga-skill-engineering',3,1),
-      ('m3','orga-skill-medical',3,1);
-    INSERT INTO availability_blocks (id, user_id, start_date, end_date, reason) VALUES
-      ('blk1','orga-crew-3','2026-12-02','2026-12-06','leave');
-    INSERT INTO assignments (id, mission_id, user_id, status) VALUES
-      ('asg-busy','m0-base','orga-crew-2','accepted'),
-      ('asg-prop','m0-base','orga-crew-5','proposed');
-  `);
+  reset();
+  addOrg('orga', 'A');
+  addOrg('orgb', 'B');
+  addUser('orga-lead-1', 'orga', 'lead');
+  for (const [id, name] of [
+    ['orga-crew-1', 'Cora'], ['orga-crew-2', 'Cyrus'], ['orga-crew-3', 'Cara'],
+    ['orga-crew-4', 'Mira'], ['orga-crew-5', 'Eli'],
+  ] as const) addUser(id, 'orga', 'crew', name);
+  addUser('orgb-lead-1', 'orgb', 'lead');
+  addSkill('orga-skill-piloting', 'orga', 'piloting');
+  addSkill('orga-skill-engineering', 'orga', 'engineering');
+  addSkill('orga-skill-medical', 'orga', 'medical');
+  setCrewSkill('orga-crew-1', 'orga-skill-piloting', 4);
+  setCrewSkill('orga-crew-2', 'orga-skill-piloting', 2);
+  setCrewSkill('orga-crew-2', 'orga-skill-engineering', 4);
+  setCrewSkill('orga-crew-3', 'orga-skill-piloting', 4);
+  setCrewSkill('orga-crew-4', 'orga-skill-medical', 4);
+  setCrewSkill('orga-crew-5', 'orga-skill-engineering', 3);
+  setCrewSkill('orga-crew-5', 'orga-skill-medical', 3);
+  addMission({ id: 'm0-base', org_id: 'orga', status: 'active', start: '2026-12-11', end: '2026-12-12', created_by: 'orga-lead-1' });
+  addMission({ id: 'm1', org_id: 'orga', start: '2026-12-01', end: '2026-12-10', created_by: 'orga-lead-1' });
+  addMission({ id: 'm2', org_id: 'orga', start: '2026-12-05', end: '2026-12-12', created_by: 'orga-lead-1' });
+  addMission({ id: 'm3', org_id: 'orga', start: '2027-01-05', end: '2027-01-12', created_by: 'orga-lead-1' });
+  addMission({ id: 'm-orgb', org_id: 'orgb', created_by: 'orgb-lead-1' });
+  addRequirement('m1', 'orga-skill-piloting', 3, 2);
+  addRequirement('m2', 'orga-skill-engineering', 3, 1);
+  addRequirement('m3', 'orga-skill-medical', 3, 1);
+  addBlock('blk1', 'orga-crew-3', '2026-12-02', '2026-12-06');
+  addAssignment('asg-busy', 'm0-base', 'orga-crew-2', 'accepted');
+  addAssignment('asg-prop', 'm0-base', 'orga-crew-5', 'proposed');
 });
 
 const as = (u: string) => ({ 'x-user-id': u });

@@ -1,22 +1,19 @@
 import { describe, it, expect, beforeEach, afterAll } from 'vitest';
 import { buildServer } from '../src/server.js';
-import { resetDb, getDb, closeDb } from '../src/db/client.js';
+import { closeDb } from '../src/db/client.js';
+import { reset, addOrg, addUser, addMission } from './helpers.js';
 
 process.env.MC_DB = ':memory:';
 afterAll(() => closeDb());
 
 function fixture() {
-  resetDb();
-  getDb().exec(`
-    INSERT INTO organisations (id, name) VALUES ('orga','A');
-    INSERT INTO users (id, org_id, role, name) VALUES
-      ('orga-director','orga','director','D'),
-      ('orga-lead-1','orga','lead','L1'),
-      ('orga-lead-2','orga','lead','L2'),
-      ('orga-crew-1','orga','crew','C1');
-    INSERT INTO missions (id, org_id, title, status, start_date, end_date, created_by) VALUES
-      ('m-draft','orga','draft mission','draft','2026-12-01','2026-12-10','orga-lead-1');
-  `);
+  reset();
+  addOrg('orga', 'A');
+  addUser('orga-director', 'orga', 'director');
+  addUser('orga-lead-1', 'orga', 'lead');
+  addUser('orga-lead-2', 'orga', 'lead');
+  addUser('orga-crew-1', 'orga', 'crew');
+  addMission({ id: 'm-draft', org_id: 'orga', created_by: 'orga-lead-1' });
 }
 beforeEach(fixture);
 

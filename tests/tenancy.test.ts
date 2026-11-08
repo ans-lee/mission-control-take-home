@@ -1,24 +1,21 @@
 import { describe, it, expect, beforeEach, afterAll } from 'vitest';
 import { buildServer } from '../src/server.js';
-import { resetDb, getDb, closeDb } from '../src/db/client.js';
+import { closeDb } from '../src/db/client.js';
+import { reset, addOrg, addUser, addMission } from './helpers.js';
 
 process.env.MC_DB = ':memory:';
 
 afterAll(() => closeDb());
 
 beforeEach(() => {
-  resetDb();
-  const db = getDb();
-  // Minimal two-tenant fixture (full story lives in seed.ts).
-  db.exec(`
-    INSERT INTO organisations (id, name) VALUES ('orga','A'), ('orgb','B');
-    INSERT INTO users (id, org_id, role, name) VALUES
-      ('orga-lead-1','orga','lead','L1'), ('orga-crew-1','orga','crew','C1'),
-      ('orgb-lead-1','orgb','lead','BL1');
-    INSERT INTO missions (id, org_id, title, status, start_date, end_date, created_by) VALUES
-      ('m-a','orga','A mission','draft','2026-12-01','2026-12-10','orga-lead-1'),
-      ('m-orgb-secret','orgb','secret','draft','2026-12-01','2026-12-10','orgb-lead-1');
-  `);
+  reset();
+  addOrg('orga', 'A');
+  addOrg('orgb', 'B');
+  addUser('orga-lead-1', 'orga', 'lead');
+  addUser('orga-crew-1', 'orga', 'crew');
+  addUser('orgb-lead-1', 'orgb', 'lead');
+  addMission({ id: 'm-a', org_id: 'orga', created_by: 'orga-lead-1' });
+  addMission({ id: 'm-orgb-secret', org_id: 'orgb', created_by: 'orgb-lead-1' });
 });
 
 describe('tenancy', () => {
