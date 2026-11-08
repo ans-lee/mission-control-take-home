@@ -89,7 +89,7 @@ npm run cli -- --as <id> assignments respond <assignment-id> --accept|--decline
 # crew (staffing list is users filtered by role)
 npm run cli -- --as <id> crew list                  # → GET /users?role=crew
 npm run cli -- --as <id> crew profile <user-id>
-npm run cli -- --as <id> crew skills <user-id> --skill <skill-id> --level <1-5>
+npm run cli -- --as <id> crew skills <user-id> --skill <name-or-id> --level <1-5>
 
 # skills
 npm run cli -- --as <id> skills list
@@ -103,6 +103,18 @@ npm run cli -- --as <id> availability remove <block-id>
 
 Human tables by default; errors print as `[CODE] message`
 (`[SELF_APPROVAL]`, `[INVALID_TRANSITION]`, `[NOT_FOUND]`).
+
+Tip — skip copy-paste with `--json` + `jq` (every list/show supports it):
+```bash
+export MC="--as orga-lead-1 --json"
+MID=$(npm run cli -- $MC missions create --title "Relay fix" --start 2027-02-01 --end 2027-02-05 | jq -r .mission.id)
+npm run cli -- $MC requirements add $MID --skill piloting --min-level 3 --count 1
+npm run cli -- $MC match $MID
+UID=$(npm run cli -- $MC match $MID | jq -r .matches[0].user_id)
+npm run cli -- $MC assignments propose $MID $UID
+AID=$(npm run cli -- $MC assignments list --mission $MID | jq -r .assignments[0].id)
+echo "mission=$MID assignee=$UID assignment=$AID"
+```
 
 ## API (all require `x-user-id`)
 

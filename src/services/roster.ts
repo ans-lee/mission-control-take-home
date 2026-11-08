@@ -41,14 +41,15 @@ export function setUserSkills(targetId: string, skills: { skill_id: string; leve
   }
   const tx = db.transaction(() => {
     for (const s of skills) {
-      const skill = db
-        .prepare('SELECT * FROM skills WHERE id = ? AND org_id = ?')
-        .get(s.skill_id, actor.org_id) as any;
+      const key = s.skill_id.trim();
+      const skill =
+        (db.prepare('SELECT * FROM skills WHERE id = ? AND org_id = ?').get(key, actor.org_id) as any) ??
+        (db.prepare('SELECT * FROM skills WHERE name = ? AND org_id = ?').get(key.toLowerCase(), actor.org_id) as any);
       if (!skill) throw { statusCode: 404, code: 'NOT_FOUND', message: `skill ${s.skill_id} not found` };
       db.prepare(
         `INSERT INTO crew_skills (user_id, skill_id, level) VALUES (?, ?, ?)
          ON CONFLICT (user_id, skill_id) DO UPDATE SET level = excluded.level`,
-      ).run(targetId, s.skill_id, s.level);
+      ).run(targetId, skill.id, s.level);
     }
   });
   tx();

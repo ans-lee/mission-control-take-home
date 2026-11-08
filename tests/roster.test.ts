@@ -62,7 +62,7 @@ describe('roster', () => {
 
     const dir = await app.inject({
       method: 'PATCH', url: '/users/orga-crew-1/skills', headers: as('orga-director'),
-      payload: { skills: [{ skill_id: 'orga-skill-piloting', level: 5 }] },
+      payload: { skills: [{ skill_id: 'Piloting', level: 5 }] },
     });
     expect(dir.statusCode).toBe(200);
 
