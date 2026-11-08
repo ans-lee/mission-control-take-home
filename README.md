@@ -58,6 +58,48 @@ npm run cli -- --as orga-crew-1 availability add --start 2026-12-20 --end 2026-1
 npm run cli -- --as orga-crew-1 availability list
 ```
 
+### All commands
+
+Global flags (every call): `--as <user-id>` (required), `--json`, `--api <url>` (default `http://localhost:3000`).
+
+```bash
+# users / discovery
+npm run cli -- --as <id> users
+
+# missions
+npm run cli -- --as <id> missions list
+npm run cli -- --as <id> missions show <mission-id>
+npm run cli -- --as <id> missions create --title <t> --start <YYYY-MM-DD> --end <YYYY-MM-DD>
+npm run cli -- --as <id> missions edit <mission-id> [--title <t>] [--start <YYYY-MM-DD>] [--end <YYYY-MM-DD>]
+npm run cli -- --as <id> missions submit|approve|reject|activate|complete|cancel <mission-id>
+
+# requirements (upsert by skill, draft|proposed only)
+npm run cli -- --as <id> requirements add <mission-id> --skill <name> --min-level <n> --count <n>
+npm run cli -- --as <id> requirements remove <mission-id> --skill <name>
+
+# matching
+npm run cli -- --as <id> match <mission-id>
+
+# assignments
+npm run cli -- --as <id> assignments list [--mission <mission-id>] [--mine]
+npm run cli -- --as <id> assignments propose <mission-id> <user-id>
+npm run cli -- --as <id> assignments respond <assignment-id> --accept|--decline
+
+# crew
+npm run cli -- --as <id> crew list
+npm run cli -- --as <id> crew profile <user-id>
+npm run cli -- --as <id> crew skills <user-id> --skill <skill-id> --level <1-5>
+
+# skills
+npm run cli -- --as <id> skills list
+npm run cli -- --as <id> skills add <name>              # director only
+
+# availability
+npm run cli -- --as <id> availability list
+npm run cli -- --as <id> availability add --start <YYYY-MM-DD> --end <YYYY-MM-DD> [--reason <r>]
+npm run cli -- --as <id> availability remove <block-id>
+```
+
 Human tables by default; errors print as `[CODE] message`
 (`[SELF_APPROVAL]`, `[INVALID_TRANSITION]`, `[NOT_FOUND]`).
 
