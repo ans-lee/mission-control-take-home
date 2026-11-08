@@ -12,7 +12,7 @@ Requires Node 22+.
 npm install
 npm run seed   # reset mission-control.db with representative data
 npm run api    # Fastify on :3000 (PORT=3100 npm run api for another port)
-npm test       # 26 tests (tenancy, SoD, lifecycle, matcher, assignments, roster)
+npm test       # 27 tests (tenancy, SoD, lifecycle, matcher, assignments, roster)
 ```
 
 ## Seed story
