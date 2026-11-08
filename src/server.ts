@@ -2,7 +2,7 @@ import Fastify from 'fastify';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { auth, requireRole } from './services/auth.js';
-import { listOrgUsers, listOrgMissions, requireOrgMission } from './db/queries.js';
+import { listOrgUsers, listOrgMissions, listOrgCrew, listOrgSkills, requireOrgMission } from './db/queries.js';
 import { transition, createMission, type MissionAction } from './services/lifecycle.js';
 import { getMatches } from './services/matcher.js';
 import {
@@ -10,6 +10,10 @@ import {
   proposeAssignment, proposeSchema,
   respondToAssignment, respondSchema,
 } from './services/assignments.js';
+import {
+  createSkill, createSkillSchema, setUserSkills, setSkillsSchema,
+  getUserProfile, createBlock, createBlockSchema, listBlocks, deleteBlock,
+} from './services/roster.js';
 import { dateSchema, assertDateRange } from './schemas.js';
 
 const createMissionSchema = z.object({
@@ -116,6 +120,59 @@ export function buildServer() {
       throw { statusCode: 400, code: 'BAD_REQUEST', message: parsed.error.message };
     }
     return { assignment: respondToAssignment(id, parsed.data.accept, req.actor) };
+  });
+
+  // Skills catalog: reads scoped to org; writes director-only.
+  app.get('/skills', async (req) => {
+    return { skills: listOrgSkills(req.actor.org_id) };
+  });
+  app.post('/skills', { preHandler: requireRole('director') }, async (req) => {
+    const parsed = createSkillSchema.safeParse(req.body);
+    if (!parsed.success) {
+      throw { statusCode: 400, code: 'BAD_REQUEST', message: parsed.error.message };
+    }
+    return { skill: createSkill(parsed.data.name, req.actor) };
+  });
+
+  // Crew: scoped list + profile (own or lead+).
+  app.get('/crew', async (req) => {
+    return { crew: listOrgCrew(req.actor.org_id) };
+  });
+  app.get('/users/:id', async (req) => {
+    const { id } = req.params as { id: string };
+    return { user: getUserProfile(id, req.actor) };
+  });
+  app.patch('/users/:id/skills', async (req) => {
+    const { id } = req.params as { id: string };
+    const parsed = setSkillsSchema.safeParse(req.body);
+    if (!parsed.success) {
+      throw { statusCode: 400, code: 'BAD_REQUEST', message: parsed.error.message };
+    }
+    return { skills: setUserSkills(id, parsed.data.skills, req.actor) };
+  });
+
+  // Availability: own blocks; lead/director may view others via ?user_id.
+  app.get('/availability', async (req) => {
+    const q = req.query as { user_id?: string };
+    return { blocks: listBlocks(req.actor, q.user_id) };
+  });
+  app.post('/availability', async (req) => {
+    const parsed = createBlockSchema.safeParse(req.body);
+    if (!parsed.success) {
+      throw { statusCode: 400, code: 'BAD_REQUEST', message: parsed.error.message };
+    }
+    try {
+      return { block: createBlock(parsed.data, req.actor) };
+    } catch (e: any) {
+      if (e?.message?.includes('range')) {
+        throw { statusCode: 400, code: 'BAD_REQUEST', message: e.message };
+      }
+      throw e;
+    }
+  });
+  app.delete('/availability/:id', async (req) => {
+    const { id } = req.params as { id: string };
+    return deleteBlock(id, req.actor);
   });
 
   return app;
